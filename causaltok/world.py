@@ -11,9 +11,8 @@ Consequence = Hashable
 class FiniteWorld:
     """Finite deterministic controlled world.
 
-    For each state s and action a:
-      consequences[s][a] is emitted, then
-      transitions[s][a] is the next state.
+    For each state s and action a, consequences[s][a] is emitted and then
+    transitions[s][a] is entered.
     """
 
     transitions: tuple[tuple[int, ...], ...]
@@ -60,6 +59,11 @@ class FiniteWorld:
             state, consequence = self.step(state, action)
             out.append(consequence)
         return tuple(out)
+
+    def state_probabilities(self) -> tuple[float, ...]:
+        if self.probabilities is not None:
+            return self.probabilities
+        return tuple([1.0 / self.n_states] * self.n_states)
 
     def to_dict(self) -> dict:
         return {
