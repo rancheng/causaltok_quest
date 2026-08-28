@@ -3,7 +3,7 @@ import random
 from .world import FiniteWorld
 
 
-def _duplicate_base(base_t, base_y, duplicates: int, seed: int = 0, rare_state: int | None = None):
+def _duplicate_base(base_t, base_y, duplicates: int, seed: int = 0, rare_state: int | None = None, rare_total_probability: float = 1e-6):
     if duplicates < 1:
         raise ValueError("duplicates must be >= 1")
     rng = random.Random(seed)
@@ -24,14 +24,21 @@ def _duplicate_base(base_t, base_y, duplicates: int, seed: int = 0, rare_state: 
                 "lighting_id": rng.getrandbits(32),
                 "copy_index": nuisance_copy,
             })
+
     if rare_state is None:
         probabilities = [1.0 / n] * n
     else:
-        probabilities = [1.0] * n
-        for d in range(duplicates):
-            probabilities[rare_state * duplicates + d] = 1e-4
-        z = sum(probabilities)
-        probabilities = [p / z for p in probabilities]
+        if not 0 < rare_total_probability < 1:
+            raise ValueError("rare_total_probability must be in (0, 1)")
+        probabilities = [0.0] * n
+        rare_indices = [rare_state * duplicates + d for d in range(duplicates)]
+        rare_set = set(rare_indices)
+        common_indices = [i for i in range(n) if i not in rare_set]
+        for i in rare_indices:
+            probabilities[i] = rare_total_probability / len(rare_indices)
+        for i in common_indices:
+            probabilities[i] = (1.0 - rare_total_probability) / len(common_indices)
+
     return FiniteWorld(tuple(transitions), tuple(consequences), tuple(observations), tuple(probabilities))
 
 
@@ -74,10 +81,10 @@ def duplicate_world(causal_states: int = 50, duplicates: int = 20, actions: int 
     return _duplicate_base(tuple(base_t), tuple(base_y), duplicates, seed)
 
 
-def rare_critical_state(duplicates: int = 16, seed: int = 3) -> FiniteWorld:
+def rare_critical_state(duplicates: int = 16, seed: int = 3, rare_total_probability: float = 1e-6) -> FiniteWorld:
     base_t = ((0, 1), (1, 2), (2, 0))
     base_y = (("normal", "normal"), ("normal", "normal"), ("normal", "catastrophic"))
-    return _duplicate_base(base_t, base_y, duplicates, seed, rare_state=2)
+    return _duplicate_base(base_t, base_y, duplicates, seed, rare_state=2, rare_total_probability=rare_total_probability)
 
 
 PUBLIC_WORLDS = {
