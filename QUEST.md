@@ -1,209 +1,230 @@
 # Quest — From InfoTok to CausalTok
 
-## The challenge
+## One-line challenge
 
-Suppose an agent observes a world, takes actions, and sees consequences. You want to construct the **shortest discrete representation of its past that preserves everything necessary to predict the consequences of future interventions**.
+**Find the shortest discrete language sufficient to predict how a physical world responds to every admissible action.**
 
-You are not optimizing pixel reconstruction. You are not given semantic, object, depth, contact, force, or geometry labels.
-
-The target is a representation in which useful physical concepts emerge because they are necessary for prediction.
+You are not given object, contact, depth, semantic, geometry, force, or task labels. If such concepts are useful, they must emerge because prediction requires them.
 
 ---
 
-## Part A — From surprisal to code length
+## 1. Warm-up — From surprisal to code length
 
-Let a source emit symbols `x` with probabilities `p(x)`. Consider a prefix-free code over an alphabet of size `B`.
+Let a source draw symbols `x` with probability `p(x)`. A tokenizer emits a prefix-free variable-length string over an alphabet of size `C`.
 
-1. Derive a lower bound on the expected code length.
-2. Characterize a near-optimal code length for each symbol.
-3. Explain the relation between code length and surprisal.
-4. Implement a binary prefix-code constructor and compare its expected length with entropy.
+### Math
 
-Your code will be tested on distributions with up to `10^6` symbols and highly skewed probabilities.
+Derive a lower bound on expected code length and construct a code within a constant of it. Explain when an individual sample should receive approximately
 
----
+`N(x) ~= -log_C p(x)`
 
-## Part B — The nuisance paradox
+tokens.
 
-An observation is
+### Code
 
-```text
-X = (S, N)
+```python
+def optimal_prefix_code(probabilities, alphabet_size):
+    """Return one C-ary codeword, as a list of integers, for each symbol."""
 ```
 
-where `S` contains a few bits that determine all future physical consequences, while `N` contains hundreds or thousands of random nuisance bits independent of dynamics.
-
-1. Compare the optimal reconstruction rate with the optimal predictive rate.
-2. Construct the smallest counterexample showing why raw observation surprisal can be the wrong quantity for a robot.
-3. State what quantity should replace it if the goal is to predict intervention-conditioned futures.
-
-Your explanation must be accompanied by an executable example.
+Hidden binary instances may contain up to `10^6` symbols. The evaluator checks prefix-freeness, exact expected length, optimality, and runtime.
 
 ---
 
-## Part C — Exact finite physical universe
+## 2. The nuisance paradox
 
-A finite deterministic world has states `s`, actions `a`, physical consequences `y`, and successor states `s'`:
+Let an observation be `X=(S,N)`, where `S` determines future physical consequences and `N` is independent high-entropy nuisance.
 
-```text
-(s, a) -> (y, s')
+### Math
+
+Compare the minimum rate for exact reconstruction of `X` with the minimum rate required to preserve all intervention-conditioned future consequences. Construct a counterexample where raw surprisal allocates more code to an irrelevant distinction than to a physically decisive one.
+
+### Code — Fresh Nuisance Attack
+
+The public kit provides `FreshNuisanceStream`. Repeated observation of the same physical state returns a stable `sensor` payload and **fresh random `metadata` bytes on every visit**. Hidden tests sweep nuisance entropy over several orders of magnitude.
+
+A strong solution should make the increase in causal rate approach zero as nuisance entropy grows.
+
+---
+
+## 3. What is a physical state?
+
+For a history `h` and future action string `u`, let `Y(h,u)` denote the complete future consequence trace.
+
+Define the strongest equivalence relation under which two histories may share one token state whenever no admissible future intervention can distinguish them.
+
+Prove:
+
+1. it is an equivalence relation;
+2. every exactly sufficient deterministic tokenizer refines this partition;
+3. encoding the equivalence class itself is sufficient;
+4. if there are `K` classes, exact fixed-length binary representation requires at least `ceil(log2 K)` bits in the worst case;
+5. derive the expected C-ary prefix-code bound for the class distribution.
+
+---
+
+## 4. Exact coding challenge — Minimize a controlled physical machine
+
+The organizer supplies a deterministic Mealy-style world through:
+
+```python
+FiniteWorld(
+    transitions=...,
+    consequences=...,
+    observations=...,
+    probabilities=...,
+)
 ```
 
-You receive the transition and consequence tables but no semantic state labels.
+For state `s` and action `a`, the world emits `consequences[s][a]` and enters `transitions[s][a]`.
 
-A history/state representation is **exactly sufficient** if states assigned the same code can never be distinguished by any future action sequence through their consequence traces.
+### Required API
 
-### Mathematical tasks
+```python
+def causal_partition(world: FiniteWorld) -> list[int]:
+    """Return canonical class_id[s] for every state s."""
+```
 
-1. Define the correct equivalence relation on states (or histories).
-2. Prove that it is an equivalence relation.
-3. Prove a lower bound on the number of internal representation states required by any exact deterministic encoder.
-4. Characterize when the lower bound is attainable.
-5. Derive worst-case and expected description-length bounds.
+Canonical IDs are consecutive `0..K-1`, ordered by the smallest raw-state index in each class.
 
-### Coding task
+### Hidden constraints
+
+- Bronze: `n <= 500`, `m <= 8`
+- Silver: `n <= 2e4`, `m <= 16`
+- Gold: `n <= 1e6`, `m <= 8`
+
+Naive pairwise comparison is intentionally too slow for Gold.
+
+### Public vs hidden verification
+
+The public checker only searches for **short distinguishing action strings** up to a declared horizon. Passing it does **not** prove exact soundness or minimality.
+
+The hidden judge separately checks exact soundness and independently computes the coarsest valid partition.
+
+---
+
+## 5. Emit the shortest causal code
+
+Given canonical `class_id[s]` and state probability `p_s`, aggregate class probability
+
+`P(c) = sum_{s in c} p_s`.
 
 Implement:
 
 ```python
-def minimize_world(world) -> list[int]:
+def causal_code(class_id, state_probability, alphabet_size):
+    """Return one C-ary prefix codeword for each causal class."""
+```
+
+The evaluator computes the true expected code length and checks exact finite-instance optimality. Report redundancy relative to C-ary entropy.
+
+---
+
+## 6. Public Boss Worlds
+
+The public package exposes representative generators; hidden parameters and hidden generators differ.
+
+- **Random Texture Explosion** — many nuisance-expanded raw states share a much smaller physical machine.
+- **One-Bit Contact** — a tiny distinction changes an action consequence and must never be merged.
+- **Delayed Distinction** — states are identical under short action strings and differ only at a long depth.
+- **Huge Duplicate World** — very many raw nodes are nuisance copies of a tiny machine.
+- **Rare Critical State** — the decisive causal class has total probability approximately `1e-6`, but exact sufficiency still forbids merging it away.
+- **Fresh Nuisance Stream** — every visit generates new random nuisance bytes while the physical state stays fixed.
+
+---
+
+## 7. Approximate stochastic world — Rate–distortion
+
+For stochastic dynamics, the public kit defines `StochasticWorld`, where each `(state, action)` has a distribution over `(consequence, next_state)`.
+
+For the executable track, the organizer uses a deterministic partition `Z=f(S)` and scores
+
+`J = H_B(Z) + beta * D`,
+
+where `D` is the state/action averaged KL divergence between each state's distribution over `(consequence, next_class)` and the corresponding class-conditional mixture distribution.
+
+### Math
+
+Study the information–distortion tradeoff, including at least four of: monotonicity, convexity/counterexamples, zero-distortion limit, large-distortion limit, deterministic vs stochastic encoders, Lagrangian form, relation to classical rate–distortion, relation to exact causal states.
+
+### Code
+
+```python
+def approximate_partition(world: StochasticWorld, beta: float) -> list[int]:
     ...
 ```
 
-The output contains one class ID per raw state.
-
-Hidden tests measure:
-
-- **soundness**: merged states really are intervention-indistinguishable;
-- **minimality**: no unnecessary distinctions remain;
-- **runtime** and **memory**;
-- behavior on large nuisance-expanded worlds;
-- long delayed distinctions that defeat fixed-horizon heuristics.
-
-Official limits may include up to roughly `10^6` raw states and a small action alphabet.
+For small hidden worlds the organizer computes the global optimum independently. The public `score_approximate_partition` only scores your proposal; it does not optimize it.
 
 ---
 
-## Part D — Public adversarial families
+## 8. Online extension — When should a new token be emitted?
 
-The public package includes representative generators. Hidden generators will not be identical.
+Long stretches of unchanged predictive state should cost almost no communication; a rare physical event may require a new token.
 
-### 1. Random texture trap
+To prevent side channels, encoder and decoder are evaluated as separate objects:
 
-Many raw states differ only by irrelevant nuisance IDs. The physical machine is much smaller than the observation space.
+```python
+class StreamingEncoder:
+    def reset(self): ...
+    def observe(self, observation, previous_action) -> list[int]: ...
 
-### 2. One-bit contact trap
-
-A tiny binary distinction changes the consequence of an action.
-
-### 3. Delayed distinction
-
-Two states look identical under short tests and differ only after a long intervention suffix.
-
-### 4. Huge duplicate world
-
-A very large raw machine is formed from many nuisance copies of a much smaller physical machine.
-
-### 5. Rare critical state
-
-A low-probability state can be physically decisive. Probability alone must not justify merging it away in the exact track.
-
----
-
-## Part E — Minimal code for the discovered physical states
-
-After computing your partition, aggregate state probabilities into class probabilities `p(c)` and construct a prefix-free code.
-
-Report:
-
-```text
-entropy of causal classes
-expected code length
-expected code length - entropy
-raw-state entropy
-compression ratio relative to raw-state coding
+class StreamingDecoder:
+    def reset(self): ...
+    def consume(self, symbols): ...
+    def predict(self, query_action): ...
 ```
 
-The evaluator checks the actual codewords, not just reported lengths.
+Only emitted symbols may pass from encoder to decoder. Hidden score is prediction error plus a rate penalty; RAM is capped and metered.
+
+The public kit contains `public_stream`, with continuously changing nuisance and a rare physical-state transition.
 
 ---
 
-## Part F — Approximate physical equivalence
+## 9. Optional Final Boss — From finite worlds to robot video
 
-Exact equality is unrealistic in stochastic and continuous worlds.
+You are given frozen dense video features and action-labelled robot trajectories. Learn a variable-rate bottleneck `Z_t` that predicts future frozen features conditioned on future actions.
 
-Let a representation be `Z=f(H)`, where `H` is observation/action history. Propose a distortion based on the difference between future consequence distributions under interventions.
+Conceptual objective:
 
-Study an information-constrained objective of the form
+`future predictive loss + beta * representation rate`.
+
+No supervised semantic, object, depth, contact, optical-flow, geometry, or reconstruction objective may be added. Those concepts may only be used after training as probes.
+
+The goal is to move the rate–future-predictability frontier left.
+
+---
+
+## 10. Submission package
 
 ```text
-minimize information rate
-subject to predictive distortion <= epsilon
+solution.pdf
+src/
+  exact.py
+  coding.py
+  approximate.py
+  streaming.py
+README.md
+counterexample.json
+complexity.md
 ```
 
-Tasks:
+The Final Boss may add `video/` training code and results.
 
-1. define the distortion precisely;
-2. prove basic properties of the optimal rate as a function of `epsilon`;
-3. identify the zero-distortion limit;
-4. design a finite-sample estimator;
-5. implement it on a stochastic extension of the public worlds.
-
-No particular known formalism is required; justify your choices from first principles.
+Every theorem must be marked **proved**, **assumed**, or **conjectured**. Every complexity claim must state the data structure that makes it achievable.
 
 ---
 
-## Part G — Streaming token emission
+## 11. Scoring
 
-Remove the assumption that one time step must emit one token.
+- Info-theoretic derivation — 15
+- Causal-state theorem — 20
+- Exact partition algorithm — 25
+- Algorithmic efficiency — 15
+- Shortest causal code — 10
+- Approximate extension — 10
+- Originality / new theorem — 5
 
-Design an online encoder that decides when a new token is necessary. Long periods in which the predictive state does not change should be representable with very low rate; rare physical events may trigger new tokens.
+**100 points + uncapped research bonus.**
 
-Your memory usage may not grow linearly with stream duration.
-
-Give both:
-
-- a mathematical token-boundary criterion;
-- a working streaming implementation.
-
----
-
-## Final Boss — Toward robot video
-
-You are given dense features from a frozen pretrained video representation model and action-labelled robot trajectories.
-
-Design a variable-rate bottleneck
-
-```text
-past video features -> compact tokens
-compact tokens + future actions -> future video features
-```
-
-with the conceptual objective
-
-```text
-future predictive loss + beta * representation rate
-```
-
-Do **not** add supervised semantic/contact/depth/geometry objectives. Those concepts are evaluation probes only.
-
-The goal is to move the rate–future-predictability curve left: fewer tokens at equal action-conditioned predictive quality.
-
-An exceptional result should additionally show that object permanence, contact, geometry, affordance, or other physical concepts become simply decodable despite never being direct training targets.
-
----
-
-## Deliverables
-
-1. `solution.pdf` — definitions, proofs, bounds, complexity, counterexamples.
-2. `solution.py` / C++ equivalent — exact finite-world solver.
-3. Prefix-code constructor.
-4. Runtime and memory report.
-5. At least one original adversarial world that breaks a naive method.
-6. Optional approximate/streaming/final-boss extensions.
-
-## What we are deliberately not telling you
-
-We are not asking for a named theorem, a particular automaton algorithm, a particular information-theoretic formalism, or a neural-network architecture.
-
-The strongest solution should make a huge observation space disappear and expose the smallest predictive physical machine underneath it.
+Automatic elimination includes exact-soundness failure on decisive hidden cases, future leakage, side channels, hard-coded public parameters, and irreproducible results.
