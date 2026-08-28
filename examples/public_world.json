@@ -1,0 +1,58 @@
+{
+  "transitions": [
+    [0, 4],
+    [1, 5],
+    [0, 7],
+    [1, 5],
+    [9, 7],
+    [10, 4],
+    [11, 6],
+    [10, 4],
+    [10, 2],
+    [8, 3],
+    [11, 0],
+    [10, 1]
+  ],
+  "consequences": [
+    ["idle", "touch"],
+    ["idle", "touch"],
+    ["idle", "touch"],
+    ["idle", "touch"],
+    ["slide", "hold"],
+    ["slide", "hold"],
+    ["slide", "hold"],
+    ["slide", "hold"],
+    ["fall", "reset"],
+    ["fall", "reset"],
+    ["fall", "reset"],
+    ["fall", "reset"]
+  ],
+  "observations": [
+    {"texture_id": 5073395517033431291, "lighting_id": 1051802512, "copy_index": 0},
+    {"texture_id": 1890702223848595625, "lighting_id": 2906402157, "copy_index": 1},
+    {"texture_id": 549661728470919411, "lighting_id": 402418010, "copy_index": 2},
+    {"texture_id": 11105285438068160209, "lighting_id": 113971123, "copy_index": 3},
+    {"texture_id": 8286444275301796832, "lighting_id": 2530876844, "copy_index": 0},
+    {"texture_id": 14864741614097609483, "lighting_id": 685731524, "copy_index": 1},
+    {"texture_id": 2868090582056735625, "lighting_id": 924765563, "copy_index": 2},
+    {"texture_id": 7008421793132065041, "lighting_id": 415393687, "copy_index": 3},
+    {"texture_id": 4879548657232103939, "lighting_id": 3466589567, "copy_index": 0},
+    {"texture_id": 2302636251494628997, "lighting_id": 4179500364, "copy_index": 1},
+    {"texture_id": 5408184617760098545, "lighting_id": 3562265906, "copy_index": 2},
+    {"texture_id": 1283066103397798384, "lighting_id": 196814233, "copy_index": 3}
+  ],
+  "probabilities": [
+    0.08333333333333333,
+    0.08333333333333333,
+    0.08333333333333333,
+    0.08333333333333333,
+    0.08333333333333333,
+    0.08333333333333333,
+    0.08333333333333333,
+    0.08333333333333333,
+    0.08333333333333333,
+    0.08333333333333333,
+    0.08333333333333333,
+    0.08333333333333333
+  ]
+}
