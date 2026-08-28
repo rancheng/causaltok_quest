@@ -45,7 +45,7 @@ QUEST.md                    full candidate specification
 causaltok/world.py          finite controlled-world format
 causaltok/public_worlds.py  representative public generators
 causaltok/public_check.py   finite-horizon public counterexample search
-causaltok/coding.py         entropy + code validation/scoring only
+causaltok/coding.py         prefix-code validation/scoring only
 causaltok/cli.py            public CLI tools
 starter/solution.py         deliberately trivial baseline
 examples/public_world.json  small public example
