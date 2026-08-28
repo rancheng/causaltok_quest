@@ -12,26 +12,32 @@ class PublicCheckReport:
     counterexample: tuple[int, int, tuple[int, ...]] | None = None
 
 
-def _canonicalize(labels):
-    remap = {}
-    out = []
-    for value in labels:
-        if value not in remap:
-            remap[value] = len(remap)
-        out.append(remap[value])
-    return out
+def canonicalize_partition(labels) -> list[int]:
+    """Canonicalize classes by increasing smallest state in each class."""
+    members: dict[object, list[int]] = {}
+    for state, value in enumerate(labels):
+        members.setdefault(value, []).append(state)
+    ordered = sorted(members, key=lambda value: min(members[value]))
+    remap = {value: i for i, value in enumerate(ordered)}
+    return [remap[value] for value in labels]
+
+
+def is_canonical_partition(labels) -> bool:
+    return list(labels) == canonicalize_partition(labels)
 
 
 def check_partition_public(world: FiniteWorld, labels, max_horizon: int = 4) -> PublicCheckReport:
-    """Search for short distinguishing action strings inside a proposed class.
+    """Search only for short distinguishing action strings inside a proposed class.
 
-    Passing this public checker is NOT a proof of soundness or minimality.
-    Hidden evaluation may use arbitrarily longer distinguishing sequences and
-    a separate exact verifier.
+    Passing this public checker is NOT a proof of exact soundness or minimality.
+    Hidden evaluation uses a separate exact verifier.
     """
     if len(labels) != world.n_states:
         return PublicCheckReport(False, -1, "partition length mismatch")
-    labels = _canonicalize(labels)
+    labels = list(labels)
+    if not is_canonical_partition(labels):
+        return PublicCheckReport(False, -1, "class IDs are not canonical")
+
     members: dict[int, list[int]] = {}
     for state, cls in enumerate(labels):
         members.setdefault(cls, []).append(state)
