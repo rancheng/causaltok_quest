@@ -2,9 +2,7 @@
 
 > **What is the shortest discrete language sufficient to predict how a physical world responds to intervention?**
 
-CausalTok is a math + coding quest for strong algorithmic and mathematical students. It starts from a deliberately small, exact setting where every claim can be checked by code, then asks you to generalize toward stochastic worlds, streaming representations, and robot video.
-
-This public repository contains the **candidate materials only**. It intentionally does **not** contain reference minimizers, organizer-only generators, optimal partitions, hidden tests, or model answers.
+This is the **public candidate kit**. It contains executable interfaces, public adversarial generators, public scorers, starter files, and tests. It intentionally does **not** contain reference minimizers, organizer-only generators, exact hidden verifiers, optimal partitions, or model answers.
 
 ## Quick start
 
@@ -13,44 +11,103 @@ python -m pip install -e .[dev]
 pytest -q
 python -m causaltok.cli list-worlds
 python -m causaltok.cli export-world texture --out /tmp/texture.json
-python -m causaltok.cli inspect examples/public_world.json
+python -m causaltok.cli inspect /tmp/texture.json
 ```
 
-Start with [`QUEST.md`](QUEST.md), then implement [`starter/solution.py`](starter/solution.py).
+Read [`QUEST.md`](QUEST.md), then implement the files under [`starter/`](starter/).
 
-## Submission API
+## Canonical public APIs
 
-Your exact finite-world solver must implement:
+### Exact causal partition
 
 ```python
-def minimize_world(world) -> list[int]:
-    """Return one integer class id for each raw state."""
+def causal_partition(world: FiniteWorld) -> list[int]:
+    """Return canonical class_id[s] for every raw state s."""
 ```
 
-Class IDs do not need to be consecutive. Only the induced partition matters.
+Class IDs must be consecutive `0..K-1`, ordered by the smallest raw-state index contained in each class.
 
-For the coding track, implement:
+### C-ary prefix code
 
 ```python
-def build_prefix_code(class_probabilities: list[float]) -> dict[int, str]:
-    """Return a binary prefix code for class indices 0..K-1."""
+def optimal_prefix_code(
+    probabilities: list[float],
+    alphabet_size: int,
+) -> list[list[int]]:
+    """Return one prefix codeword per source symbol."""
 ```
 
-The public checker can search for **short counterexamples** and validate **prefix-freeness**, but it does not prove soundness, compute minimality, or reveal the hidden optimum.
+Each code symbol must lie in `0..alphabet_size-1`.
+
+### Shortest causal code
+
+```python
+def causal_code(
+    class_id: list[int],
+    state_probability: list[float],
+    alphabet_size: int,
+) -> list[list[int]]:
+    ...
+```
+
+### Approximate stochastic track
+
+```python
+def approximate_partition(world: StochasticWorld, beta: float) -> list[int]:
+    ...
+```
+
+The public scorer evaluates `J = H_B(Z) + beta * D`; it does not search for the optimum.
+
+### Streaming track
+
+```python
+class StreamingEncoder:
+    def reset(self): ...
+    def observe(self, observation, previous_action) -> list[int]: ...
+
+class StreamingDecoder:
+    def reset(self): ...
+    def consume(self, symbols): ...
+    def predict(self, query_action): ...
+```
+
+The evaluator instantiates encoder and decoder separately. Only emitted symbols may pass between them.
+
+## Public tools vs hidden judge
+
+The public checker deliberately searches only for **bounded-horizon counterexamples**. Passing it is not a proof of exact soundness or minimality. The hidden judge uses a separate exact verifier.
+
+The public package also includes:
+
+- deterministic adversarial worlds;
+- fresh nuisance observations whose metadata is regenerated on every visit;
+- C-ary prefix-code validation and rate scoring;
+- a stochastic-world rate–distortion scorer;
+- a simple streaming benchmark generator.
 
 ## Repository layout
 
 ```text
-QUEST.md                    full candidate specification
-causaltok/world.py          finite controlled-world format
-causaltok/public_worlds.py  representative public generators
-causaltok/public_check.py   finite-horizon public counterexample search
-causaltok/coding.py         prefix-code validation/scoring only
-causaltok/cli.py            public CLI tools
-starter/solution.py         deliberately trivial baseline
-examples/public_world.json  small public example
+QUEST.md
+causaltok/
+  world.py
+  public_worlds.py
+  public_check.py
+  coding.py
+  nuisance.py
+  stochastic.py
+  streaming.py
+  cli.py
+starter/
+  exact.py
+  coding.py
+  approximate.py
+  streaming.py
+tests/
+  test_public.py
 ```
 
 ## Design principle
 
-A visually complicated observation can be physically irrelevant. A one-bit distinction can completely change the consequence of an action. Your representation should spend bits on the second kind of information, not the first.
+A visually complicated observation can be physically irrelevant. A one-bit distinction can completely change the consequence of an action. Spend bits on the second kind of information, not the first.
